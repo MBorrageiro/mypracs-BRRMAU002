@@ -11,6 +11,7 @@ void lightMins(void);
 int hexCompensation(int units);
 int decCompensation(int units);
 void initGPIO(void);
+void cleanUpFunction(void);
 void secPWM(int units);
 void hourInc(void);
 void minInc(void);
