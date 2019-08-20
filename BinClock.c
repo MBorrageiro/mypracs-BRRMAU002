@@ -15,6 +15,7 @@
 #include "string.h"
 #include "BinClock.h"
 #include "CurrentTime.h"
+#include <signal.h> //Using for clean up interrupts
 
 //Global variables
 int hours, mins, secs;
@@ -74,6 +75,20 @@ void initGPIO(void){
 	printf("Setup done\n");
 }
 
+void cleanUpFunction(void){
+	/* Used to clean up the GPIO ports on a keyboard interrupt 
+	* Sets all the output pins to Input pins to ensure no fatal shorts
+	*/
+	print("Cleaning Up GPIOS\n");
+	digitalWrite(LED[0],0);
+	pinMode(SECS,INPUT); // Sets the Seconds LED to an input
+	for(int k = 0; k <sizeof(LEDS)/sizeof(LEDS[0]) ; k++) // For loop to set all other LEDs to Inputs
+	{
+		pinMode(LED[k], INPUT);
+	}
+	exit(1);
+}		
+
 
 /*
  * The main function
@@ -81,7 +96,7 @@ void initGPIO(void){
  */
 int main(void){
 	initGPIO();
-
+	signal(SIGINT, cleanUpFunction)
 	//Set random time (3:04PM)
 	//You can comment this file out later
 	wiringPiI2CWriteReg8(RTC, HOUR, decCompensation(hours_initial));
