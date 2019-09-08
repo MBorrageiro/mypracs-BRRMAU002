@@ -35,7 +35,7 @@
 
 //SPI Settings
 #define SPI_CHAN 0 // Write your value here
-#define SPI_SPEED//NOT SURE ABOUT THIS // Write your value here
+#define SPI_SPEED 450000  //305000//409600  // 256000//  //NOT SURE ABOUT THIS // Write your value here
 
 //Filename
 #define FILENAME "src/sound_16k_8bit.raw"
@@ -43,6 +43,8 @@
 //Function definitions
 void play_audio(void);
 void stop_audio(void);
+void stop_isr(void);
+void play_pause_isr(void);
 int setup_gpio(void);
 int main(void);
 

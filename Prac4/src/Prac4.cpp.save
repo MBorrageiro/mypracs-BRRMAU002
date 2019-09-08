@@ -17,6 +17,7 @@
  */
 
 #include "Prac4.h"
+
 using namespace std;
 
 bool playing = true; // should be set false when paused
@@ -34,14 +35,14 @@ void play_pause_isr(void){
     //Write your logis here
     long interruptTime = millis();
 
-    if(interruptTime-lastInterruptTime>200){
-	if(playing){
-	    printf("Paused\n");
+    if(interruptTime-lastInterruptTime>150){
+	playing = !playing; //invert the state of playing
+	if(!playing){
+	    printf("Paused");
 	}
 	else{
-	    printf("Resume playing\n");
+	    printf("Resume playing");
 	}
-	playing = !playing; //invert the state of playing
     }
     lastInterruptTime = interruptTime;
 }
@@ -50,8 +51,7 @@ void stop_isr(void){
     // Write your logic here
     long interruptTime = millis();
 
-    if(interruptTime - lastInterruptTime>200){
-	printf("---CLOSING PROGRAM---\n");
+    if(interruptTime - lastInterruptTime>150){
 	stopped = true; //not necessary i guess
 	lastInterruptTime = interruptTime;
 	exit(0);
@@ -63,15 +63,15 @@ void stop_isr(void){
  */
 int setup_gpio(void){
     //Set up wiring Pi
-    printf("Setting Up\n");
+    printf("Setting Up\n")
     wiringPiSetup();
 
     //setting up the buttons
 	//Done
     pinMode(PLAY_BUTTON, INPUT);
     pinMode(STOP_BUTTON, INPUT);
-    pullUpDnControl(PLAY_BUTTON, PUD_UP);
-    pullUpDnControl(STOP_BUTTON, PUD_UP);
+    pullUpDnControl(PLAY_BUTTON, PUDUP);
+    pullUpDnControl(STOP_BUTTON, PUDUP);
 	//Interrupts setup through WiPi
     wiringPiISR(PLAY_BUTTON,INT_EDGE_FALLING,play_pause_isr);
     wiringPiISR(STOP_BUTTON,INT_EDGE_FALLING,stop_isr);
@@ -83,8 +83,7 @@ int setup_gpio(void){
 	printf("error setting up");
     }
     else{
-	printf("Setup successful\n");
-    }
+	printf("Setup successful");
     return 0;
 }
 
@@ -97,7 +96,6 @@ int setup_gpio(void){
  * You need to use the buffer_location variable to check when you need to switch buffers
  */
 void *playThread(void *threadargs){
-    printf("----------thread-----------\n");
     // If the thread isn't ready, don't do anything
     while(!threadReady)
         continue;
@@ -107,13 +105,12 @@ void *playThread(void *threadargs){
         //Code to suspend playing if paused
 	//TODO
 	while(!playing){ //Cheese way to suspend code when pause pushed.
-//	    printf("Paused in thread\n");
 	    continue;
 	}
 
         //Write the buffer out to SPI
         //TODO DONE check though
-	wiringPiSPIDataRW(SPI_CHAN, buffer[bufferReading][buffer_location],2);
+	wiringPiSPIDaraRW(SPI_CHAN, buffer[bufferReading],BUFFER_SIZE)
         //Do some maths to check if you need to toggle buffers
         buffer_location++;
         if(buffer_location >= BUFFER_SIZE) {
@@ -121,13 +118,14 @@ void *playThread(void *threadargs){
             bufferReading = !bufferReading; // switches column one it finishes one column
         }
     }
-    printf("----------THREAD END-----------\n");
+    
     pthread_exit(NULL);
 }
 
 int main(){
     // Call the setup GPIO function
-    if(setup_gpio()==-1){
+    setup_gpio();
+	if(setup_gpio()==-1){
         return 0;
     }
     
@@ -175,42 +173,37 @@ int main(){
 
     int counter = 0;
     int bufferWriting = 0;
-    char bitWise;
-    printf("Begin Reading From File\n");
+
     // Have a loop to read from the file
     while((ch = fgetc(filePointer)) != EOF){
-	//printf("HERE\n");
         while(threadReady && bufferWriting==bufferReading && counter==0){
             //waits in here after it has written to a side, and the thread is still reading from the other side
-	    continue;
-        }
-	while(!playing){
-	   // printf("pause read\n");
-	    continue;
+            continue;
+        }	char byte0[]={0,1,1,1,0,0,0,0}; //config bits with space to overwrite
+	char byte1[]={0,0,0,0,0,0,0,0}; //remain bits
+	for(int i = 4; i<8; i++){
+	    byte0[i] = ch;
+	    ch = fgetc(filePointer);
 	}
-	//ch =fgetc(filePointer);
+	for(int j = 0;i<4;i++){
+	    byte1[j] = ch
+	    ch = fgetc(filePointer);
+	}
         //Set config bits for first 8 bit packet and OR with upper bits
-	bitWise = ch>>4;
-        buffer[bufferWriting][counter][0] = 0b01110000|bitWise ; //TODO config Bits: 0b0111____
-	//printf("Filled: %c:\n",buffer[bufferWriting][counter][0]);
-	//ch = fgetc(filePointer); // update the ch variable to be the next byte
+        buffer[bufferWriting][counter][0] = ; //TODO config Bits: 0b0111____
         //Set next 8 bit packet
-	bitWise = ch<<4;
-        buffer[bufferWriting][counter][1] = bitWise; //TODO 0b____xxxx
+        buffer[bufferWriting][counter][1] = ; //TODO 0b____xxxx
 
         counter++;
         if(counter >= BUFFER_SIZE+1){
             if(!threadReady){
                 threadReady = true;
-		//printf("counter Maxed\n");
             }
 
             counter = 0;
             bufferWriting = (bufferWriting+1)%2;
         }
-	/*if(counter == 50){
-	    break;
-	}*/
+
     }
      
     // Close the file

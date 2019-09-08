@@ -89,7 +89,6 @@ void cleanUpFunction(void){
 	exit(1);
 }		
 
-
 /*
  * The main function
  * This function is called, and calls all relevant functions we've written
