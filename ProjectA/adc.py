@@ -23,18 +23,19 @@ def read_adc(adc_ch, vref = 3.3):
     msg = ((msg << 1) + adc_ch) << 5
     msg = [msg, 0b00000000]
     reply = spi.xfer2(msg)
+    print("reply: ", reply)
     #print(reply)
     #adc = int(reply,2)
     # Construct single integer out of the reply (2 bytes)
     adc = 0
     for n in reply:
         adc = (adc << 8) + n
-
+    print("Adc:",adc)
     # Last bit (0) is not part of ADC value, shift to remove it
-   # adc = adc >> 1
-
+    adc = adc >> 1
+    print("shifted: ",adc)
     # Calculate voltage form ADC value
-    voltage =2*((vref * adc) / 1024)
+    voltage =(vref * adc) / 1024
 
     return voltage
 
@@ -44,7 +45,7 @@ try:
         adc_0 = read_adc(0)
         adc_1 = read_adc(1)
         print("Ch 0:", round(adc_0, 2),"Ch 1:", round(adc_1,2))
-        time.sleep(0.5)
+        time.sleep(2)
 
 finally:
     GPIO.cleanup()
