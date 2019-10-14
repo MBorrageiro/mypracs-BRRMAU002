@@ -7,10 +7,12 @@
 using namespace std;
 
 int adcCh;
+int firstAlarm = 1;
 int reads [3];
 bool alarmErr = false;
 bool startStop = false; // false = stop, true = start
 long lastInterruptTime = 0;
+long lastAlarm = 0;
 
 void start_stop_isr(void){
     //Start stop monitoring
@@ -23,7 +25,7 @@ void start_stop_isr(void){
 	else{
 	    printf("Starting\n");
 	}
-	startStop = !startStop; //invert the state of playing
+	alarmErr = false; //invert the state of playing
     }
     lastInterruptTime = interruptTime;
 }
@@ -36,6 +38,7 @@ void setup_gpio(void){
     }
     printf("Setting Button\n");
     mcp3004Setup(BASE, SPI_CHAN);
+    pinMode(26,OUTPUT);//LED test
     pinMode(START_STOP_BTN,INPUT);
     pullUpDnControl(START_STOP_BTN,PUD_UP);
     wiringPiISR(START_STOP_BTN,INT_EDGE_FALLING,start_stop_isr);
@@ -44,14 +47,28 @@ void setup_gpio(void){
 
 double Vout(void){
     /*Alarm detection variable*/
+    long timeNow = millis();
     double vout =1;
     vout =  (reads[1]/1023.0)*voltageConvert(0);
     if(vout<0.65 || vout>2.65){
-	alarmErr = true; //alarm sound
+	if(firstAlarm){
+	    alarmErr = true;
+	    lastAlarm = timeNow;
+	    firstAlarm = 0;
+	}
+	else if (timeNow-lastAlarm>180000){
+	    alarmErr = true; //alarm sound
+	    lastAlarm = timeNow;
+	}
+    }
+	/*else{
+	    alarmErr = false;
+	}
     }
     else{
 	alarmErr = false; //operating stage is fine
-    }
+    }*/
+    //lastAlarm = timeNow;
     return vout;
 }
 
@@ -94,13 +111,19 @@ int main(){
     pthread_join(thread_id, NULL);
     printf("Reading values");*/
     while(1){
-	while(startStop){
+	//while(startStop){
 	for(adcCh=0; adcCh<3;adcCh++){
 	    reads[adcCh] = analogRead(BASE+adcCh);
 	}
 	printf("Pot: %3.2f V\t Light sen: %d \t Temp: %3.2f *C \t Vout: %3.2f\n", voltageConvert(0),reads[1],tempConvert(2),Vout());
-	for(int i = 0; i<10000000;i++);
+	if(alarmErr){
+	    digitalWrite(26,1);
 	}
+	else{
+	    digitalWrite(26,0);
+	}
+	for(int i = 0; i<10000000;i++);
+//	}
     }
     //pthread_exit(NULL);
     return 0;
