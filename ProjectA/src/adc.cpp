@@ -1,4 +1,5 @@
 #include "adc.h"
+#include <time.h>
 #define BASE 777 //defines base for the chip of the analog pins
 #define VREF 3.3 //reference voltage
 #define VZERO 0.5 //reference temperature voltage
@@ -8,15 +9,37 @@ using namespace std;
 int adcCh;
 int reads [3];
 bool alarmErr = false;
+bool startStop = false; // false = stop, true = start
+long lastInterruptTime = 0;
+
+void start_stop_isr(void){
+    //Start stop monitoring
+    long interruptTime = millis();
+
+    if(interruptTime-lastInterruptTime>200){
+	if(!startStop){
+	    printf("Stopped\n");
+	}
+	else{
+	    printf("Starting\n");
+	}
+	startStop = !startStop; //invert the state of playing
+    }
+    lastInterruptTime = interruptTime;
+}
 
 void setup_gpio(void){
     //Set up wiring Pi
     printf("Setting Up\n");
     if(wiringPiSetup()==-1){
-	printf("Error setting up");
+	printf("Error setting up\n");
     }
+    printf("Setting Button\n");
     mcp3004Setup(BASE, SPI_CHAN);
-    printf("Set up success");
+    pinMode(START_STOP_BTN,INPUT);
+    pullUpDnControl(START_STOP_BTN,PUD_UP);
+    wiringPiISR(START_STOP_BTN,INT_EDGE_FALLING,start_stop_isr);
+    printf("Set up success\n");
 }
 
 double Vout(void){
@@ -71,11 +94,13 @@ int main(){
     pthread_join(thread_id, NULL);
     printf("Reading values");*/
     while(1){
+	while(startStop){
 	for(adcCh=0; adcCh<3;adcCh++){
 	    reads[adcCh] = analogRead(BASE+adcCh);
 	}
 	printf("Pot: %3.2f V\t Light sen: %d \t Temp: %3.2f *C \t Vout: %3.2f\n", voltageConvert(0),reads[1],tempConvert(2),Vout());
 	for(int i = 0; i<10000000;i++);
+	}
     }
     //pthread_exit(NULL);
     return 0;

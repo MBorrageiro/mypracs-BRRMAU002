@@ -14,8 +14,8 @@
 #include "mcp3004.h"
 
 //Define buttons I used WiPi
-#define START_STOP_BTN 26 // Write your value here
-#define CHG_FREQ-BTN 6
+#define START_STOP_BTN 25 // Write your value here
+#define CHG_FREQ_BTN 6
 #define ALARM_RST_BTN 5
 #define RESET_BTN 13
 #define BASE 777
